@@ -1,0 +1,6 @@
+pandas
+numpy
+matplotlib
+youtube_transcript_api
+openai-whisper
+yt-dlp
