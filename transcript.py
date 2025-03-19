@@ -1,6 +1,7 @@
 import re
 import yt_dlp
 import boto3
+from youtube_transcript_api import YouTubeTranscriptApi
 
 # AWS Configuration
 S3_BUCKET_NAME = "tubequiz-bucket"
@@ -19,6 +20,30 @@ def extract_video_id(youtube_url: str) -> str:
              r"(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})")
     match = re.search(regex, youtube_url)
     return match.group(1) if match else None
+
+def get_transcript(video_id):
+    """
+    Gets the transcript of a youtube video
+
+    Parameters
+    ----------
+    video_id : str
+        The video id
+
+    Returns
+    -------
+    str
+        The transcript of the video
+    """
+    try:
+        full_transcript = " "
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        for line in transcript:
+            full_transcript += line['text'] + " "
+        return full_transcript
+    except Exception as e:
+        print(e)
+        return None
 
 def download_audio(link: str) -> str:
     """
@@ -72,3 +97,5 @@ def transcribe_audio(s3_uri: str, job_name: str) -> str:
         return status['TranscriptionJob']['Transcript']['TranscriptFileUri']
     else:
         raise RuntimeError("Transcription job failed")
+    
+

@@ -4,8 +4,7 @@ import os
 import time
 import re
 import boto3
-from transcript import extract_video_id, download_audio, upload_s3, transcribe_audio
-from transcript_api import get_transcript
+from transcript import extract_video_id, download_audio, upload_s3, transcribe_audio, get_transcript
 from model import generate_quiz
 
 # Set page configuration
