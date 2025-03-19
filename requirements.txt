@@ -1,6 +1,10 @@
-pandas
-numpy
-matplotlib
-youtube_transcript_api
-openai-whisper
+streamlit
+boto3
 yt-dlp
+youtube-transcript-api
+requests
+json
+os
+time
+re
+
