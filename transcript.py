@@ -1,79 +1,74 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 import re
-from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.formatters import JSONFormatter
-import whisper
-import os
 import yt_dlp
-from yt_dlp import YoutubeDL
 import boto3
-import requests
 
-s3_client = boto3.client("s3")
-BUCKET_NAME = "tubequiz-bucket"
-transcribe_client = boto3.client("transcribe")
+# AWS Configuration
+S3_BUCKET_NAME = "tubequiz-bucket"
+S3_REGION = "us-west-1"
+TRANSCRIBE_REGION = "us-west-1"
 
-def extract_video_id(youtube_url):
+# Initialize AWS clients
+s3_client = boto3.client("s3", region_name=S3_REGION)
+transcribe_client = boto3.client("transcribe", region_name=TRANSCRIBE_REGION)
+
+def extract_video_id(youtube_url: str) -> str:
     """
-    Extracts the video id from a youtube url
-
-    Parameters
-    ----------
-    youtube_url : str
-        The youtube url
-
-    Returns
-    -------
-    str
-        The video id
+    Extracts the video ID from a YouTube URL.
     """
-    regex = r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})"
+    regex = (r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|"
+             r"(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})")
     match = re.search(regex, youtube_url)
     return match.group(1) if match else None
 
-def download_audio(link):
+def download_audio(link: str) -> str:
+    """
+    Downloads the audio from a YouTube video as an MP3 file.
+    """
     video_id = extract_video_id(link)
-    output_path = f"{video_id}_audio"
+    if not video_id:
+        raise ValueError("Invalid YouTube URL")
+    
+    output_path = f"{video_id}_audio.mp3"
     ydl_opts = {
-        'format':'bestaudio/best',
-        'outtmpl':output_path,
-        'postprocessors':[{
-            'key':'FFmpegExtractAudio',
-            'preferredcodec':'mp3',
-            'preferredquality':'192'
+        'format': 'bestaudio/best',
+        'outtmpl': f"{video_id}_audio",
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192'
         }],
-
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([link])
+    return output_path
 
-    return output_path+'.mp3'
-
-def upload_s3(file_path):
+def upload_s3(file_path: str) -> str:
+    """
+    Uploads a file to AWS S3 and returns the S3 URI.
+    """
     s3_key = f"audio/{file_path}"
-    s3_client.upload_file(file_path, BUCKET_NAME, s3_key)
-    return f"s3://{BUCKET_NAME}/{s3_key}"
+    s3_client.upload_file(file_path, S3_BUCKET_NAME, s3_key)
+    return f"s3://{S3_BUCKET_NAME}/{s3_key}"
 
-def transcribe_audio(s3_uri, job_name):
-
-    """Transcribes an audio file using AWS Transcribe."""
+def transcribe_audio(s3_uri: str, job_name: str) -> str:
+    """
+    Transcribes an audio file using AWS Transcribe and returns the transcript URI.
+    """
     transcribe_client.start_transcription_job(
         TranscriptionJobName=job_name,
         Media={'MediaFileUri': s3_uri},
         MediaFormat='mp3',
         LanguageCode='en-US'
     )
-
-    # Wait for the job to complete
+    
     while True:
         status = transcribe_client.get_transcription_job(TranscriptionJobName=job_name)
-        if status['TranscriptionJob']['TranscriptionJobStatus'] in ['COMPLETED', 'FAILED']:
+        state = status['TranscriptionJob']['TranscriptionJobStatus']
+        if state in ['COMPLETED', 'FAILED']:
             break
-
-    if status['TranscriptionJob']['TranscriptionJobStatus'] == 'COMPLETED':
-        transcript_uri = status['TranscriptionJob']['Transcript']['TranscriptFileUri']
-        return transcript_uri
     
+    if state == 'COMPLETED':
+        return status['TranscriptionJob']['Transcript']['TranscriptFileUri']
+    else:
+        raise RuntimeError("Transcription job failed")
