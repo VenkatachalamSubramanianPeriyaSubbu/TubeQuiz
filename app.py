@@ -8,9 +8,9 @@ from transcript import extract_video_id, download_audio, upload_s3, transcribe_a
 from model import generate_quiz
 
 #AWS 
-aws_access_key = st.secrets["aws"]["access_key_id"]
-aws_secret_key = st.secrets["aws"]["secret_access_key"]
-aws_region = st.secrets["aws"]["region"]
+aws_access_key = st.secrets["access_key_id"]
+aws_secret_key = st.secrets["secret_access_key"]
+aws_region = st.secrets["region"]
 
 # Set page configuration
 st.set_page_config(
