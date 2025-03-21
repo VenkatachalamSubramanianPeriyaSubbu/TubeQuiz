@@ -7,6 +7,11 @@ import boto3
 from transcript import extract_video_id, download_audio, upload_s3, transcribe_audio, get_transcript
 from model import generate_quiz
 
+#AWS 
+aws_access_key = st.secrets["aws"]["aws_access_key_id"]
+aws_secret_key = st.secrets["aws"]["aws_secret_access_key"]
+aws_region = st.secrets["aws"]["aws_region"]
+
 # Set page configuration
 st.set_page_config(
     page_title="YouTube Quiz Generator",
