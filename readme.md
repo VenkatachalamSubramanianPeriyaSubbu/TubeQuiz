@@ -1,4 +1,4 @@
-# YouTube Quiz Generator
+# TubeQuiz - YouTube Quiz Generator
 
 ## Overview
 The YouTube Quiz Generator is a Streamlit web application that allows users to generate quizzes from YouTube videos. It transcribes the video, extracts key points, and creates multiple-choice and short-answer questions using AI.
